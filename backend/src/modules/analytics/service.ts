@@ -114,6 +114,25 @@ export class AnalyticsService {
       skillDemand = [];
     }
 
+    // Compute average rating from feedback table (prefer real feedback over stored profile rating)
+    let averageRating = 0;
+    let ratingCount = 0;
+    try {
+      const agg = await this.prisma.feedback.aggregate({
+        where: { toUserId: userId },
+        _avg: { rating: true },
+        _count: { rating: true }
+      }).catch(() => ({ _avg: { rating: null }, _count: { rating: 0 } }));
+
+      averageRating = Number(agg._avg.rating || 0);
+      ratingCount = Number(agg._count.rating || 0);
+    } catch (e) {
+      // fallback to stored profile rating if any
+      averageRating = fl.rating || 0;
+      ratingCount = 0;
+      console.warn('AnalyticsService: failed to aggregate feedback ratings', e);
+    }
+
     return {
       totalEarnings,
       activeContracts,
@@ -121,10 +140,11 @@ export class AnalyticsService {
       totalApplications,
       conversionRate: Math.round(conversionRate * 100) / 100,
       recentApplications,
-  averageRating: fl.rating || 0,
-  profileViews: fl.profileViews || 0,
-  skillDemand,
-  projectedEarnings: this.calculateProjectedEarnings(fl.contracts || [], fl.dailyRate || undefined)
+      averageRating,
+      ratingCount,
+      profileViews: fl.profileViews || 0,
+      skillDemand,
+      projectedEarnings: this.calculateProjectedEarnings(fl.contracts || [], fl.dailyRate || undefined)
     };
   }
 

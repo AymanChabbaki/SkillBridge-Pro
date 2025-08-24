@@ -35,6 +35,15 @@ export async function fetchFeedbackList(userId?: string) {
 }
 
 export async function submitFeedbackMock(payload: { toUserId: string; message: string }) {
-  const created = await feedbackService.createFeedback({ toUserId: payload.toUserId, rating: 5, comment: payload.message });
+  // Fill required fields with sensible defaults for the mock helper
+  const created = await feedbackService.createFeedback({
+    toUserId: payload.toUserId,
+    missionId: '',
+    contractId: '',
+    rating: 5,
+    comment: payload.message,
+    skills: { technical: 0, communication: 0, timeliness: 0 },
+    isPublic: true,
+  });
   return created;
 }

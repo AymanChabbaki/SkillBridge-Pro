@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { contractService } from '../../services/contractService';
-import { Contract } from '../../services/types';
+import { Contract, Mission, FreelancerProfile, CompanyProfile } from '../../services/types';
+
+// UI-level contract shape that may include relational fields when returned by the API
+type ContractWithRelations = Contract & {
+  mission?: Mission;
+  freelancer?: FreelancerProfile;
+  company?: CompanyProfile;
+};
 
 const ContractList = () => {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts] = useState<ContractWithRelations[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +75,7 @@ const ContractList = () => {
                       <td className="p-2 align-top">{idx + 1}</td>
                       <td className="p-2 align-top">{c.mission?.title}</td>
                       <td className="p-2 align-top">{c.freelancer?.user?.name}</td>
-                      <td className="p-2 align-top">{c.mission?.company?.user?.name}</td>
+                      <td className="p-2 align-top">{c.mission?.company?.name ?? c.company?.name ?? '-'}</td>
                       <td className="p-2 align-top">{c.status}</td>
                       <td className="p-2 align-top">{c.startDate ? new Date(c.startDate).toLocaleDateString() : '-'}</td>
                       <td className="p-2 align-top">

@@ -255,6 +255,10 @@ export interface Contract {
   missionId: string;
   freelancerId: string;
   companyId: string;
+  // Optional relational fields populated by API when includes are requested
+  mission?: Mission;
+  freelancer?: FreelancerProfile;
+  company?: CompanyProfile;
   terms: {
     scope: string;
     deliverables: string[];

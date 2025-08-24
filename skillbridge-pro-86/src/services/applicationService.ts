@@ -20,9 +20,9 @@ export const applicationService = {
     return get<PaginatedResponse<Application>>(`/applications/me?${params.toString()}`);
   },
 
-  async getMissionApplications(missionId: string): Promise<Application[]> {
-  // Backend returns a paginated response for mission applications.
-  return get<PaginatedResponse<Application>>(`/applications/mission/${missionId}`) as Promise<PaginatedResponse<Application>>;
+  async getMissionApplications(missionId: string): Promise<PaginatedResponse<Application>> {
+    // Backend returns a paginated response for mission applications.
+    return get<PaginatedResponse<Application>>(`/applications/mission/${missionId}`);
   },
 
   async updateApplicationStatus(

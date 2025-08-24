@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { contractService } from '../../services/contractService';
-import { Contract } from '../../services/types';
+import { Contract, Mission, FreelancerProfile, CompanyProfile } from '../../services/types';
+
+type ContractWithRelations = Contract & {
+  mission?: Mission;
+  freelancer?: FreelancerProfile;
+  company?: CompanyProfile;
+};
 
 const ContractDetail = () => {
   const { id } = useParams();
-  const [contract, setContract] = useState<Contract | null>(null);
+  const [contract, setContract] = useState<ContractWithRelations | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +64,7 @@ const ContractDetail = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Company</h3>
-                  <p className="font-semibold">{contract.mission?.company?.user?.name}</p>
+                  <p className="font-semibold">{contract.mission?.company?.name ?? contract.company?.name ?? '-'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Status</h3>

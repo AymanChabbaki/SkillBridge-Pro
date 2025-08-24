@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
-import { fetchFeedbackList } from '../../services/feedbackService';
+import { feedbackService } from '../../services/feedbackService';
 import { Feedback } from '../../services/types';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../hooks/use-toast';
@@ -14,10 +14,10 @@ const FeedbackList: React.FC = () => {
   const load = async (p = 1) => {
     setLoading(true);
     try {
-      const res = await fetchFeedbackList();
-      // fetchFeedbackList returns an array (or paginated) depending on service implementation
-      const list: Feedback[] = Array.isArray(res) ? res : (res.items || []);
+      const res = await feedbackService.getMyFeedback(p, 50);
+      const list: Feedback[] = res.items || [];
       setItems(list);
+      setPage(res.page || p);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Failed', description: e?.message || 'Could not load feedback' });
     } finally {
@@ -40,11 +40,11 @@ const FeedbackList: React.FC = () => {
             <div className="text-sm text-muted-foreground">No feedback yet.</div>
           ) : (
             <ul className="space-y-3">
-              {items.map(i => (
+        {items.map(i => (
                 <li key={i.id} className="p-3 border rounded-md hover:shadow-md transition-shadow">
                   <div className="flex justify-between">
                     <div>
-                      <div className="text-sm font-semibold">{i.authorName || i.author || 'Anonymous'}</div>
+          <div className="text-sm font-semibold">{i.fromUser?.name || 'Anonymous'}</div>
                       <div className="text-xs text-muted-foreground">{new Date(i.createdAt).toLocaleString()}</div>
                     </div>
                     <div className="text-sm font-medium">{i.rating} ★</div>
