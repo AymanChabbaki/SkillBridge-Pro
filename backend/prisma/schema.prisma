@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  FREELANCE
+  COMPANY
+}
+
+enum MissionStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  ASSESSMENT_SENT
+  ASSESSMENT_COMPLETED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  ACCEPTED
+  REJECTED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum AssessmentType {
+  QCM
+  CHALLENGE
+  TECHNICAL_TEST
+  PORTFOLIO_REVIEW
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  companyProfile    CompanyProfile?
+  freelancerProfile FreelancerProfile?
+
+  // Feedback relations
+  feedbackGiven    Feedback[] @relation("FeedbackFrom")
+  feedbackReceived Feedback[] @relation("FeedbackTo")
+
+  // Assessment reviews
+  assessmentReviews Assessment[] @relation("AssessmentReviewer")
+
+  @@map("users")
+}
+
+model CompanyProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  name        String
+  industry    String
+  size        String
+  description String?
+  website     String?
+  location    String?
+  values      Json?
+  logo        String?
+  verified    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missions  Mission[]
+  contracts Contract[]  // Add relation to contracts
+
+  @@map("company_profiles")
+}
+
+model FreelancerProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  title         String
+  bio           String?
+  skills        Json     // Array of skills with levels
+  seniority     String
+  dailyRate     Float?
+  availability  Json     // Availability calendar/status
+  location      String?
+  remote        Boolean  @default(true)
+  languages     Json?    // Spoken languages
+  experience    Int?     // Years of experience
+  profileViews  Int      @default(0)
+  rating        Float?
+  completedJobs Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio    PortfolioItem[]
+  applications Application[]
+  contracts    Contract[]
+
+  @@map("freelancer_profiles")
+}
+
+model PortfolioItem {
+  id           String @id @default(cuid())
+  freelancerId String
+  title        String
+  description  String
+  technologies Json   // Array of technologies used
+  images       Json?  // Array of image URLs
+  links        Json?  // Array of links (live, github, etc.)
+  impact       String?
+  duration     String?
+  teamSize     Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_items")
+}
+
+model Mission {
+  id               String        @id @default(cuid())
+  companyId        String
+  title            String
+  description      String
+  requiredSkills   Json          // Array of required skills
+  optionalSkills   Json?         // Array of optional skills
+  budgetMin        Float?
+  budgetMax        Float?
+  duration         String        // "1-3 months", "3-6 months", etc.
+  modality         String        // "remote", "on-site", "hybrid"
+  sector           String
+  urgency          String        // "low", "medium", "high"
+  experience       String        // "junior", "mid", "senior"
+  status           MissionStatus @default(PUBLISHED)
+  startDate        DateTime?
+  endDate          DateTime?
+  applicationsCount Int          @default(0)
+  views            Int           @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  company      CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications Application[]
+  contracts    Contract[]
+  feedback     Feedback[]
+
+  @@map("missions")
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  missionId        String
+  freelancerId     String
+  coverLetter      String
+  proposedRate     Float
+  availabilityPlan String
+  status           ApplicationStatus @default(PENDING)
+  matchingScore    Float?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  mission     Mission           @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  freelancer  FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  assessments Assessment[]
+  interviews  Interview[]
+
+  @@unique([missionId, freelancerId])
+  @@map("applications")
+}
+
+model Assessment {
+  id            String         @id @default(cuid())
+  applicationId String
+  type          AssessmentType
+  title         String
+  description   String?
+  questions     Json           // Array of questions
+  answers       Json?          // Array of answers
+  score         Float?
+  maxScore      Float
+  reviewerId    String?
+  reviewNotes   String?
+  timeLimit     Int?           // Minutes
+  submittedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer    User?       @relation("AssessmentReviewer", fields: [reviewerId], references: [id])
+
+  @@map("assessments")
+}
+
+model Interview {
+  id            String    @id @default(cuid())
+  applicationId String
+  scheduledAt   DateTime
+  duration      Int       // Minutes
+  meetingLink   String?
+  notes         String?
+  completed     Boolean   @default(false)
+  rating        Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model Contract {
+  id           String         @id @default(cuid())
+  missionId    String
+  freelancerId String
+  clientId     String         // Add clientId field for direct access
+  templateId   String?
+  terms        Json           // Contract terms and conditions
+  hourlyRate   Float?
+  fixedPrice   Float?
+  startDate    DateTime
+  endDate      DateTime?
+  status       ContractStatus @default(DRAFT)
+  signedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  mission     Mission           @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  freelancer  FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  client      CompanyProfile    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  milestones  Milestone[]
+  payments    Payment[]
+  tracking    TrackingEntry[]
+  disputes    Dispute[]
+  feedback    Feedback[]
+
+  @@map("contracts")
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  contractId  String
+  title       String
+  description String?
+  amount      Float
+  dueDate     DateTime
+  status      MilestoneStatus @default(PENDING)
+  approvedAt  DateTime?
+  deliverable String?
+  feedback    String?         // Add feedback field
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contract Contract   @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("milestones")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  milestoneId      String
+  contractId       String        // Add contractId for direct access
+  payerId          String        // Add payerId field
+  amount           Float
+  currency         String        @default("USD") // Add currency field
+  status           PaymentStatus @default(PENDING)
+  paymentMethod    String?
+  transactionId    String?
+  stripePaymentId  String?       // Add Stripe payment ID
+  description      String?       // Add description field
+  processingFee    Float?        // Add processing fee field
+  processedAt      DateTime?
+  fees             Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  contract  Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model TrackingEntry {
+  id            String    @id @default(cuid())
+  contractId    String
+  date          DateTime  @default(now())
+  hours         Float?
+  description   String
+  deliverable   String?
+  attachments   Json?     // Array of file URLs
+  approved      Boolean   @default(false)
+  approvedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("tracking_entries")
+}
+
+model Feedback {
+  id         String  @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  missionId  String?
+  contractId String?
+  rating     Float   // 1-5 stars
+  comment    String?
+  skills     Json?   // Skill-specific ratings
+  isPublic   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  fromUser User      @relation("FeedbackFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User      @relation("FeedbackTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  mission  Mission?  @relation(fields: [missionId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@map("feedback")
+}
+
+model Dispute {
+  id         String        @id @default(cuid())
+  contractId String
+  reason     String
+  description String
+  status     DisputeStatus @default(OPEN)
+  resolverId String?
+  resolution String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("disputes")
+}
+
+model Recommendation {
+  id          String @id @default(cuid())
+  userId      String
+  type        String // "mission", "freelancer", "skill_improvement"
+  targetId    String
+  title       String
+  description String
+  score       Float
+  explanation Json   // Why this recommendation
+  viewed      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("recommendations")
+}
+
+// Analytics tables (materialized views or computed data)
+model AnalyticsSnapshot {
+  id        String @id @default(cuid())
+  period    String // "daily", "weekly", "monthly"
+  date      DateTime
+  data      Json   // Aggregated metrics
+  createdAt DateTime @default(now())
+
+  @@map("analytics_snapshots")
+}

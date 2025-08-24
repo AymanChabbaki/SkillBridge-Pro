@@ -1,0 +1,60 @@
+{
+  "info": {
+    "_postman_id": "bolt-skillbridge-collection-2025-full",
+    "name": "SkillBridge API Full Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "SkillBridge API: All endpoints including admin, user, company, freelance, contract, milestone, payment, interview, mission, application, matching, assessment, tracking, feedback, dispute, analytics."
+  },
+  "item": [
+    { "name": "Auth", "item": [
+      { "name": "Register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Test User\",\n  \"role\": \"ADMIN\"\n}" }, "url": { "raw": "http://localhost:3000/api/auth/register", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "register"] } } },
+      { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}" }, "url": { "raw": "http://localhost:3000/api/auth/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "login"] } } }
+    ] },
+    { "name": "Users", "item": [
+      { "name": "Get All Users (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] } } },
+      { "name": "Get User By ID (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/users/{{userId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "{{userId}}"] } } }
+    ] },
+    { "name": "Companies", "item": [
+      { "name": "Get All Companies (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/companies", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "companies"] } } }
+    ] },
+    { "name": "Freelancers", "item": [
+      { "name": "Get All Freelancers (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/freelancers", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "freelancers"] } } }
+    ] },
+    { "name": "Contracts", "item": [
+      { "name": "Get All Contracts (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/contracts", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "contracts"] } } }
+    ] },
+    { "name": "Milestones", "item": [
+      { "name": "Get All Milestones (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/milestones", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "milestones"] } } }
+    ] },
+    { "name": "Payments", "item": [
+      { "name": "Get All Payments (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/payments", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "payments"] } } }
+    ] },
+    { "name": "Interviews", "item": [
+      { "name": "Get All Interviews (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/interviews", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "interviews"] } } }
+    ] },
+    { "name": "Missions", "item": [
+      { "name": "Get All Missions (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/missions", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "missions"] } } }
+    ] },
+    { "name": "Applications", "item": [
+      { "name": "Get All Applications (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/applications", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "applications"] } } }
+    ] },
+    { "name": "Matching", "item": [
+      { "name": "Get All Matching (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/matching", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "matching"] } } }
+    ] },
+    { "name": "Assessments", "item": [
+      { "name": "Get All Assessments (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/assessments", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "assessments"] } } }
+    ] },
+    { "name": "Tracking", "item": [
+      { "name": "Get All Tracking (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/tracking", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "tracking"] } } }
+    ] },
+    { "name": "Feedback", "item": [
+      { "name": "Get All Feedback (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/feedback", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "feedback"] } } }
+    ] },
+    { "name": "Disputes", "item": [
+      { "name": "Get All Disputes (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/disputes", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "disputes"] } } }
+    ] },
+    { "name": "Analytics", "item": [
+      { "name": "Get All Analytics (Admin)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }], "url": { "raw": "http://localhost:3000/api/analytics", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "analytics"] } } }
+    ] }
+  ]
+}
