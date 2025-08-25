@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { InterviewService } from './service';
 import { CreateInterviewSchema, UpdateInterviewSchema } from './dto';
+import { InviteInterviewSchema } from './dto';
 import { successResponse, errorResponse } from '../../utils/response';
 
 export class InterviewController {
@@ -120,6 +121,21 @@ export class InterviewController {
       );
 
       return successResponse(res, interviews, 'Application interviews retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  inviteAndSchedule = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validation = InviteInterviewSchema.safeParse(req.body);
+      if (!validation.success) {
+        return errorResponse(res, 'Validation failed', 400, 'VALIDATION_ERROR', validation.error.errors);
+      }
+
+      const interview = await this.interviewService.inviteAndSchedule(validation.data, req.user!.id);
+
+      return successResponse(res, interview, 'Interview invitation sent', 201);
     } catch (error) {
       next(error);
     }

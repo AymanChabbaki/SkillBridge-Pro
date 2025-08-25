@@ -47,6 +47,21 @@ router.get('/top-skills',
 );
 
 /**
+ * Active counts
+ */
+router.get('/active-contracts',
+  authenticateToken,
+  requireAdmin,
+  analyticsController.getActiveContracts
+);
+
+router.get('/active-freelancers',
+  authenticateToken,
+  requireAdmin,
+  analyticsController.getActiveFreelancers
+);
+
+/**
  * @swagger
  * /api/v1/analytics/market-trends:
  *   get:

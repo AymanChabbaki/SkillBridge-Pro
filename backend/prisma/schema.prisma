@@ -116,6 +116,7 @@ model CompanyProfile {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   missions  Mission[]
   contracts Contract[]  // Add relation to contracts
+  shortlists Shortlist[]
 
   @@map("company_profiles")
 }
@@ -145,6 +146,7 @@ model FreelancerProfile {
   portfolio    PortfolioItem[]
   applications Application[]
   contracts    Contract[]
+  shortlists   Shortlist[]
 
   @@map("freelancer_profiles")
 }
@@ -198,6 +200,7 @@ model Mission {
   applications Application[]
   contracts    Contract[]
   feedback     Feedback[]
+  shortlists   Shortlist[]
 
   @@map("missions")
 }
@@ -451,4 +454,23 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+// Shortlist persisted per company -> mission -> freelancer
+model Shortlist {
+  id           String   @id @default(cuid())
+  companyId    String
+  missionId    String
+  freelancerId String
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  CompanyProfile  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  mission  Mission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  freelancer FreelancerProfile @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, missionId, freelancerId])
+  @@map("shortlists")
 }

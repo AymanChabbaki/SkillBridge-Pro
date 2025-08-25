@@ -50,4 +50,22 @@ export class AnalyticsController {
       next(error);
     }
   };
+
+  getActiveContracts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.analyticsService.getActiveContractsCount();
+      return successResponse(res, result, 'Active contracts count retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getActiveFreelancers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.analyticsService.getActiveFreelancersCount();
+      return successResponse(res, result, 'Active freelancers count retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
 }

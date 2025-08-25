@@ -3,6 +3,7 @@ import { CreateInterviewDto, UpdateInterviewDto } from './dto';
 import { NotFoundError, ValidationError, ForbiddenError } from '../../utils/errors';
 import { NotificationRepository } from '../notification/repository';
 import { NotificationService } from '../notification/service';
+import { shortlistService } from '../shortlist/service';
 
 export class InterviewService {
   private notificationRepo: NotificationRepository;
@@ -25,7 +26,7 @@ export class InterviewService {
       }
     });
 
-    if (!application) {
+  if (!application) {
       throw new NotFoundError('Application not found');
     }
 
@@ -133,6 +134,91 @@ export class InterviewService {
       // Log and continue
       // eslint-disable-next-line no-console
       console.warn('Failed to create/send notifications for interview', err);
+    }
+
+    return interview;
+  }
+
+  /**
+   * Invite a freelancer to a mission: create an application if missing, then schedule an interview.
+   * Only company owner or admin may call this (router enforces requireCompanyOrAdmin).
+   */
+  async inviteAndSchedule(data: import('./dto').InviteInterviewDto, userId: string) {
+    const { missionId, freelancerId, scheduledAt, duration, meetingLink, notes } = data;
+
+    // Ensure mission exists and belongs to the company
+    const mission = await this.interviewRepository.prisma.mission.findUnique({
+      where: { id: missionId },
+      include: { company: { include: { user: true } } }
+    });
+
+    if (!mission) throw new NotFoundError('Mission not found');
+
+    // Only company owner or admin can invite
+    if (mission.company.userId !== userId) {
+      throw new ForbiddenError('Not authorized to invite for this mission');
+    }
+
+    // Check if application exists for this freelancer & mission
+    let application = await this.interviewRepository.prisma.application.findUnique({
+      where: { missionId_freelancerId: { missionId, freelancerId } },
+      include: { freelancer: { include: { user: true } }, mission: true }
+    });
+
+    if (!application) {
+      // Use provided coverLetter/proposedRate when available
+      const appCover = data.coverLetter || `Invited by company ${mission.company.name}`;
+      const appRate = data.proposedRate !== undefined ? data.proposedRate : 0;
+
+      // Create an application record on behalf of freelancer with status SHORTLISTED
+      application = await this.interviewRepository.prisma.application.create({
+        data: {
+          freelancerId,
+          missionId,
+          coverLetter: appCover,
+          proposedRate: appRate,
+          availabilityPlan: 'Invited by company',
+          status: 'SHORTLISTED'
+        },
+        include: {
+          freelancer: { include: { user: true } },
+          mission: true
+        }
+      });
+
+      // increment mission applicationsCount
+      try {
+        await this.interviewRepository.prisma.mission.update({ where: { id: missionId }, data: { applicationsCount: { increment: 1 } } });
+      } catch (e) {}
+    }
+
+    // Mark freelancer as shortlisted for this mission so they won't appear again in matching
+    try {
+      await shortlistService.addToShortlist(userId, mission.company.id, missionId, freelancerId);
+    } catch (e) {
+      // don't block the invite if shortlist creation fails
+    }
+
+    // Now create interview using existing repository
+    const interview = await this.interviewRepository.create({
+      applicationId: application.id,
+      scheduledAt,
+      duration,
+      meetingLink: meetingLink || undefined,
+      notes: notes || undefined
+    });
+
+    // Notifications are created within createInterview normally; replicate that behavior
+    try {
+      await this.notificationRepo.create({
+        userId: application.freelancer.userId,
+        type: 'info',
+        title: 'Interview invitation',
+        body: `You have been invited to an interview for ${application.mission.title} scheduled at ${interview.scheduledAt.toISOString()}`,
+        data: { interviewId: interview.id, missionId: application.mission.id }
+      });
+    } catch (e) {
+      // ignore notification errors
     }
 
     return interview;

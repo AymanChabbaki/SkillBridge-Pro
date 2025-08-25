@@ -176,8 +176,18 @@ export class MatchingService {
       (await prisma.application.findMany({ where: { missionId }, select: { freelancerId: true } })).map(a => a.freelancerId)
     );
 
-  for (const f of freelancers) {
+    // Fetch shortlisted freelancers for this mission to exclude them as well
+    let shortlistedSet = new Set<string>();
+    try {
+      const shortlisted = await (prisma as any).shortlist.findMany({ where: { missionId }, select: { freelancerId: true } });
+      shortlistedSet = new Set((shortlisted || []).map((s: any) => s.freelancerId));
+    } catch (e) {
+      // If shortlist table not available yet (prisma client not generated), continue without shortlist exclusion
+    }
+
+    for (const f of freelancers) {
       if (applicants.has(f.id)) continue; // skip freelancers who already applied
+      if (shortlistedSet.has(f.id)) continue; // skip freelancers already shortlisted for this mission
       // normalize freelancer profile fields
       let fre = f;
       try {
@@ -188,6 +198,15 @@ export class MatchingService {
         if (typeof (fre as any).availability === 'string') {
           try { (fre as any).availability = JSON.parse((fre as any).availability); } catch (err) { (fre as any).availability = {}; }
         }
+      }
+
+      // Server-side skill pre-filter: ensure freelancer has at least one required skill if mission specifies requiredSkills
+      const requiredSkills = Array.isArray(mission.requiredSkills) ? mission.requiredSkills.map((s: any) => String(s).toLowerCase()) : [];
+      const freelancerSkills = Array.isArray(fre.skills) ? (fre.skills as any[]).map((s: any) => (s.name || s).toLowerCase()) : [];
+
+      if (requiredSkills.length > 0) {
+        const hasSkill = requiredSkills.some((rs: string) => freelancerSkills.some((fs: string) => fs.includes(String(rs).toLowerCase())));
+        if (!hasSkill) continue; // skip freelancers that don't match any required skill
       }
 
       const { score, reasons } = this.calculateFreelancerMatch(mission, fre);

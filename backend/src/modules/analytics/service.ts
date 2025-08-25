@@ -19,7 +19,8 @@ export class AnalyticsService {
       } else if (role === 'COMPANY') {
         return this.getCompanySummary(userId, lastMonth, lastYear);
       } else if (role === 'ADMIN') {
-        return this.getAdminSummary(lastMonth, lastYear);
+        // return extended admin summary with extra aggregated fields
+        return this.getAdminExtendedSummary(lastMonth, lastYear);
       }
 
       throw new Error(`Unsupported role: ${role}`);
@@ -182,6 +183,12 @@ export class AnalyticsService {
   const activeMissions = company.missions.filter(m => m.status === 'PUBLISHED' || m.status === 'IN_PROGRESS').length;
   const completedMissions = company.missions.filter(m => m.status === 'COMPLETED').length;
 
+  // Company-scoped active contracts and active freelancers
+  const allContracts = company.missions.flatMap(m => m.contracts || []);
+  const activeContracts = allContracts.filter((c: any) => c.status === 'ACTIVE').length;
+  const activeFreelancerIds = Array.from(new Set(allContracts.filter((c: any) => c.status === 'ACTIVE').map((c: any) => c.freelancerId).filter(Boolean)));
+  const activeFreelancers = activeFreelancerIds.length;
+
     // Calculate total spend
     const totalSpend = company.missions.reduce((sum, mission) => {
       return sum + mission.contracts.reduce((contractSum, contract) => {
@@ -207,6 +214,8 @@ export class AnalyticsService {
       totalMissions,
       activeMissions,
       completedMissions,
+  activeContracts,
+  activeFreelancers,
       totalSpend,
       totalApplications,
       avgApplicationsPerMission: Math.round(avgApplicationsPerMission * 100) / 100,
@@ -263,6 +272,66 @@ export class AnalyticsService {
     };
   }
 
+  /**
+   * Extended admin summary with extra aggregated fields used by the admin dashboard
+   */
+  private async getAdminExtendedSummary(lastMonth: Date, lastYear: Date) {
+    // Base admin summary
+    const base = await this.getAdminSummary(lastMonth, lastYear);
+
+    // Additional platform-wide aggregates
+    const [freelancersCount, companiesCount] = await Promise.all([
+      this.prisma.freelancerProfile.count(),
+      this.prisma.companyProfile.count()
+    ]);
+
+    // Average rating across feedbacks
+    const ratingAgg = await this.prisma.feedback.aggregate({ _avg: { rating: true } }).catch(() => ({ _avg: { rating: null } }));
+    const avgRating = Number(ratingAgg._avg.rating || 0);
+
+    // Total volume (sum of completed payment amounts)
+    const volumeAgg = await this.prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: 0 } }));
+    const totalVolume = Number(volumeAgg._sum.amount || 0);
+
+    // Average match time: average days between mission.createdAt and contract.createdAt for contracts tied to missions
+    const contractsWithMission = await this.prisma.contract.findMany({
+      select: { createdAt: true, mission: { select: { createdAt: true } } }
+    }).catch(() => [] as any[]);
+
+    let avgMatchTime = 0;
+    if (contractsWithMission.length > 0) {
+      const totalDays = contractsWithMission.reduce((sum: number, c: any) => {
+        try {
+          const mCreated = new Date(c.mission.createdAt).getTime();
+          const cCreated = new Date(c.createdAt).getTime();
+          const days = Math.max(0, Math.round((cCreated - mCreated) / (1000 * 60 * 60 * 24)));
+          return sum + days;
+        } catch (e) {
+          return sum;
+        }
+      }, 0);
+
+      avgMatchTime = Math.round((totalDays / contractsWithMission.length) * 100) / 100; // days, 2 decimals
+    }
+
+    // Success rate based on completed contracts
+    const [totalContracts, completedContracts] = await Promise.all([
+      this.prisma.contract.count(),
+      this.prisma.contract.count({ where: { status: 'COMPLETED' } })
+    ]);
+    const successRate = totalContracts > 0 ? Math.round((completedContracts / totalContracts) * 10000) / 100 : 0;
+
+    return {
+      ...base,
+      freelancersCount,
+      companiesCount,
+      avgRating,
+      totalVolume,
+      avgMatchTime,
+      successRate
+    };
+  }
+
   async getTopSkills() {
     // Aggregate skills from all missions and freelancers
     const missions = await this.prisma.mission.findMany({
@@ -301,6 +370,34 @@ export class AnalyticsService {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 20)
       .map(([skill, count]) => ({ skill, count }));
+  }
+
+  /**
+   * Count currently active contracts on the platform.
+   */
+  async getActiveContractsCount() {
+    try {
+      const count = await this.prisma.contract.count({ where: { status: 'ACTIVE' } });
+      return { activeContracts: count };
+    } catch (e) {
+      console.error('AnalyticsService.getActiveContractsCount error', e);
+      return { activeContracts: 0 };
+    }
+  }
+
+  /**
+   * Count freelancers that are currently active (have at least one active contract)
+   */
+  async getActiveFreelancersCount() {
+    try {
+      const count = await this.prisma.freelancerProfile.count({
+        where: { contracts: { some: { status: 'ACTIVE' } } }
+      });
+      return { activeFreelancers: count };
+    } catch (e) {
+      console.error('AnalyticsService.getActiveFreelancersCount error', e);
+      return { activeFreelancers: 0 };
+    }
   }
 
   async getMarketTrends(query: MarketTrendsQueryDto) {

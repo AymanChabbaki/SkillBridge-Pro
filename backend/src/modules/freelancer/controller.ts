@@ -18,8 +18,11 @@ export class FreelancerController {
   async getFreelancerById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const incrementViews = !req.user || req.user.role !== 'FREELANCE';
-      const result = await freelancerService.getFreelancerById(id, incrementViews);
+  // Allow callers to explicitly request increment via query param ?increment=true
+  const incrementQuery = String(req.query.increment || '').toLowerCase();
+  const incrementRequested = incrementQuery === 'true' || incrementQuery === '1';
+  const incrementViews = incrementRequested || !req.user || req.user.role !== 'FREELANCE';
+  const result = await freelancerService.getFreelancerById(id, incrementViews);
       
       successResponse(res, result, 'Freelancer retrieved successfully');
     } catch (error) {

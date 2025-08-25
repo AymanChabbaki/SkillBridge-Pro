@@ -19,6 +19,7 @@ import trackingRouter from '../modules/tracking/router';
 import feedbackRouter from '../modules/feedback/router';
 import disputeRouter from '../modules/dispute/router';
 import analyticsRouter from '../modules/analytics/router';
+import shortlistRouter from '../modules/shortlist/router';
 
 export const router = Router();
 
@@ -34,6 +35,7 @@ router.use('/matching', matchingRouter);
 router.use('/assessments', assessmentRouter);
 router.use('/interviews', interviewRouter);
 router.use('/notifications', notificationRouter);
+router.use('/shortlists', shortlistRouter);
 router.use('/contracts', contractRouter);
 router.use('/milestones', milestoneRouter);
 router.use('/payments', paymentRouter);

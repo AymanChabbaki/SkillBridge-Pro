@@ -94,6 +94,45 @@ router.post('/schedule',
 
 /**
  * @swagger
+ * /api/v1/interviews/invite:
+ *   post:
+ *     summary: Invite freelancer to mission and schedule interview (company)
+ *     tags: [Interviews]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - missionId
+ *               - freelancerId
+ *               - scheduledAt
+ *               - duration
+ *             properties:
+ *               missionId:
+ *                 type: string
+ *               freelancerId:
+ *                 type: string
+ *               scheduledAt:
+ *                 type: string
+ *                 format: date-time
+ *               duration:
+ *                 type: number
+ *               meetingLink:
+ *                 type: string
+ *                 format: uri
+ */
+router.post('/invite',
+  authenticateToken,
+  requireCompanyOrAdmin,
+  interviewController.inviteAndSchedule
+);
+
+/**
+ * @swagger
  * /api/v1/interviews/upcoming:
  *   get:
  *     summary: Get upcoming interviews
