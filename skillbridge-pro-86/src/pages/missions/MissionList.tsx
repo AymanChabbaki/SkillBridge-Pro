@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import MissionModal from '../../components/missions/MissionModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../state/store';
 import { missionService } from '../../services/missionService';
@@ -15,6 +16,7 @@ const MissionList = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const fetchMissions = async () => {
@@ -49,12 +51,13 @@ const MissionList = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Missions</h1>
         {user?.role === 'COMPANY' && (
-          <Button asChild>
-            <Link to="/missions/new">
+          <>
+            <Button onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Post Mission
-            </Link>
-          </Button>
+            </Button>
+            <MissionModal open={open} onOpenChange={setOpen} />
+          </>
         )}
       </div>
 

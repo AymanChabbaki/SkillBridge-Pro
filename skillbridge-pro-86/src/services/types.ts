@@ -64,7 +64,7 @@ export interface FreelancerProfile {
   remote: boolean;
   languages: string[];
   // user shorthand for display purposes
-  user?: { id: string; name: string; avatar?: string };
+  user?: { id: string; name: string; avatar?: string; email?: string };
   // runtime-only flag populated by backend when a freelancer has passing assessments
   isCertified?: boolean;
   portfolio: PortfolioItem[];
@@ -169,12 +169,14 @@ export interface Application {
   coverLetter: string;
   proposedRate: number;
   availabilityPlan: string;
-  status: 'PENDING' | 'SHORTLISTED' | 'REJECTED' | 'ACCEPTED';
+  status: 'PENDING' | 'SHORTLISTED' | 'REJECTED' | 'ACCEPTED' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED';
   notes?: string;
   createdAt: string;
   updatedAt: string;
   freelancer?: FreelancerProfile;
   mission?: Mission;
+  // optional interviews returned when fetching application-related interviews
+  interviews?: Interview[];
 }
 
 export interface CreateApplicationRequest {
@@ -414,6 +416,9 @@ export interface AnalyticsSummary {
   // Backend / alternate names
   activeContracts?: number;
   completedJobs?: number;
+  // Missions (company-side)
+  activeMissions?: number;
+  totalMissions?: number;
   conversionRate?: number;
   averageRating?: number;
   totalApplications?: number;
@@ -430,6 +435,8 @@ export interface AnalyticsSummary {
   totalHires?: number;
   avgTimeToHire?: number;
   talentPoolSize?: number;
+  // number of freelancers on the platform or in the company's talent pool
+  totalFreelancers?: number;
   satisfactionRate?: number;
   totalSpend?: number;
   

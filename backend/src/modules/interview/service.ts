@@ -1,9 +1,17 @@
 import { InterviewRepository } from './repository';
 import { CreateInterviewDto, UpdateInterviewDto } from './dto';
 import { NotFoundError, ValidationError, ForbiddenError } from '../../utils/errors';
+import { NotificationRepository } from '../notification/repository';
+import { NotificationService } from '../notification/service';
 
 export class InterviewService {
-  constructor(private interviewRepository: InterviewRepository) {}
+  private notificationRepo: NotificationRepository;
+  private notificationService: NotificationService;
+
+  constructor(private interviewRepository: InterviewRepository) {
+    this.notificationRepo = new NotificationRepository(this.interviewRepository.prisma);
+    this.notificationService = new NotificationService(this.notificationRepo);
+  }
 
   async createInterview(data: CreateInterviewDto, userId: string) {
     // Verify the application exists and user has permission
@@ -11,9 +19,9 @@ export class InterviewService {
       where: { id: data.applicationId },
       include: {
         mission: {
-          include: { company: true }
+          include: { company: { include: { user: true } } }
         },
-        freelancer: true
+        freelancer: { include: { user: true } }
       }
     });
 
@@ -81,7 +89,53 @@ export class InterviewService {
       throw new ValidationError('Interview time conflicts with existing interviews');
     }
 
-    return this.interviewRepository.create(data);
+    const interview = await this.interviewRepository.create(data);
+
+    // Create in-app notification for freelancer
+    try {
+      const freelancerUserEmail = application.freelancer.user?.email;
+      const companyUserEmail = application.mission.company.user?.email;
+
+      await this.notificationRepo.create({
+        userId: application.freelancer.userId,
+        type: 'info',
+        title: 'Interview scheduled',
+        body: `An interview has been scheduled for your application to ${application.mission.title} on ${interview.scheduledAt.toISOString()}`,
+        data: { interviewId: interview.id, missionId: application.mission.id }
+      });
+
+      // Optionally send email notifications when SMTP is configured
+      if (freelancerUserEmail) {
+        await this.notificationService.sendEmailIfConfigured(
+          freelancerUserEmail,
+          'Interview scheduled',
+          `<p>Your interview for <strong>${application.mission.title}</strong> is scheduled at ${interview.scheduledAt.toISOString()}</p>`
+        );
+      }
+
+      if (companyUserEmail) {
+        await this.notificationRepo.create({
+          userId: application.mission.company.userId,
+          type: 'info',
+          title: 'Interview scheduled',
+          body: `You scheduled an interview for ${application.mission.title} on ${interview.scheduledAt.toISOString()}`,
+          data: { interviewId: interview.id, missionId: application.mission.id }
+        });
+
+        await this.notificationService.sendEmailIfConfigured(
+          companyUserEmail,
+          'Interview scheduled',
+          `<p>You scheduled an interview for <strong>${application.mission.title}</strong> at ${interview.scheduledAt.toISOString()}</p>`
+        );
+      }
+    } catch (err) {
+      // Notification errors shouldn't block interview creation
+      // Log and continue
+      // eslint-disable-next-line no-console
+      console.warn('Failed to create/send notifications for interview', err);
+    }
+
+    return interview;
   }
 
   async getInterview(id: string, userId: string, role: string) {
@@ -168,5 +222,64 @@ export class InterviewService {
     }
 
     return this.interviewRepository.findByApplicationId(applicationId);
+  }
+
+  async completeInterview(id: string, payload: { rating?: number; notes?: string }, userId: string, role: string) {
+    const interview = await this.interviewRepository.findById(id);
+    if (!interview) throw new NotFoundError('Interview not found');
+
+    // Only company owner or admin can mark complete
+    const isCompanyOwner = interview.application.mission.company.userId === userId;
+    const isAdmin = role === 'ADMIN';
+    if (!isCompanyOwner && !isAdmin) throw new ForbiddenError('Not authorized to complete this interview');
+
+    // Perform interview update, feedback creation (optional), and application status update in a transaction
+    const prisma = this.interviewRepository.prisma;
+    try {
+      const results = await prisma.$transaction(async (tx) => {
+        // update interview record
+        const updatedInterview = await tx.interview.update({
+          where: { id },
+          data: { completed: true, rating: payload.rating, notes: payload.notes },
+          include: {
+            application: {
+              include: {
+                mission: { include: { company: true } },
+                freelancer: true
+              }
+            }
+          }
+        });
+
+        // create feedback if provided
+        let feedback = null;
+        if (payload.rating !== undefined || payload.notes) {
+          feedback = await tx.feedback.create({
+            data: {
+              fromUserId: interview.application.mission.company.userId,
+              toUserId: interview.application.freelancer.userId,
+              missionId: interview.application.mission.id,
+              rating: payload.rating || 0,
+              comment: payload.notes || '',
+              isPublic: true,
+            }
+          });
+        }
+
+        const app = await tx.application.update({
+          where: { id: interview.application.id },
+          data: { status: 'INTERVIEW_COMPLETED' }
+        });
+
+        return { updatedInterview, feedback, app };
+      });
+
+      return results.updatedInterview;
+    } catch (e) {
+      // if transaction fails, log and rethrow
+      // eslint-disable-next-line no-console
+      console.error('Transaction failed during interview completion', e);
+      throw e;
+    }
   }
 }

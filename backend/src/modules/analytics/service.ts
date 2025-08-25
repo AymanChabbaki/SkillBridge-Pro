@@ -176,9 +176,11 @@ export class AnalyticsService {
 
     if (!company) return {};
 
-    const totalMissions = company.missions.length;
-    const activeMissions = company.missions.filter(m => m.status === 'IN_PROGRESS').length;
-    const completedMissions = company.missions.filter(m => m.status === 'COMPLETED').length;
+  const totalMissions = company.missions.length;
+  // Missions use statuses like 'PUBLISHED', 'COMPLETED', 'CANCELLED' in the schemata.
+  // Count published missions as active (previously checked 'IN_PROGRESS' which doesn't exist).
+  const activeMissions = company.missions.filter(m => m.status === 'PUBLISHED' || m.status === 'IN_PROGRESS').length;
+  const completedMissions = company.missions.filter(m => m.status === 'COMPLETED').length;
 
     // Calculate total spend
     const totalSpend = company.missions.reduce((sum, mission) => {

@@ -199,6 +199,13 @@ router.patch('/:id',
   interviewController.updateInterview
 );
 
+// Mark interview complete and create feedback + update application status
+router.patch('/:id/complete',
+  authenticateToken,
+  requireCompanyOrAdmin,
+  interviewController.completeInterview
+);
+
 /**
  * @swagger
  * /api/v1/interviews/{id}:

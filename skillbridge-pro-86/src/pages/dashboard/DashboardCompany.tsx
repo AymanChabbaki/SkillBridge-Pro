@@ -8,20 +8,56 @@ import { Badge } from '../../components/ui/badge';
 import { 
   Users, 
   Briefcase, 
-  TrendingUp,
   Clock,
   Plus,
   ArrowRight,
   FileText
 } from 'lucide-react';
+import { analyticsService } from '../../services/analyticsService';
+import MissionModal from '../../components/missions/MissionModal';
+import { missionService } from '../../services/missionService';
+import { AnalyticsSummary, Mission } from '../../services/types';
 
 const DashboardCompany = () => {
   const { user } = useSelector((state: RootState) => state.auth);
-  
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [recentMissions, setRecentMissions] = useState<Mission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openMissionModal, setOpenMissionModal] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [analyticsData, missionsData] = await Promise.all([
+          analyticsService.getSummary(),
+          missionService.getMissions({ limit: 5 })
+        ]);
+
+        setAnalytics(analyticsData || {});
+        setRecentMissions(Array.isArray(missionsData.items) ? missionsData.items : []);
+      } catch (error) {
+        console.error('Failed to fetch company dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   return (
+    <>
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Company Dashboard</h1>
+        <h1 className="text-3xl font-bold text-foreground">Welcome back, {user?.name}!</h1>
         <p className="text-muted-foreground">Manage your hiring and talent acquisition</p>
       </div>
 
@@ -33,7 +69,7 @@ const DashboardCompany = () => {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{analytics?.totalMissions ?? analytics?.activeProjects ?? 0}</div>
             <p className="text-xs text-muted-foreground">Currently hiring</p>
           </CardContent>
         </Card>
@@ -44,7 +80,7 @@ const DashboardCompany = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">142</div>
+            <div className="text-2xl font-bold">{analytics?.totalApplications ?? 0}</div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
@@ -55,7 +91,7 @@ const DashboardCompany = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{analytics?.talentPoolSize ?? analytics?.totalFreelancers ?? 0}</div>
             <p className="text-xs text-muted-foreground">Currently working</p>
           </CardContent>
         </Card>
@@ -66,8 +102,8 @@ const DashboardCompany = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7 days</div>
-            <p className="text-xs text-muted-foreground">Industry: 14 days</p>
+            <div className="text-2xl font-bold">{analytics?.avgTimeToHire ?? '—'}</div>
+            <p className="text-xs text-muted-foreground">Industry: {analytics?.platformGrowth ?? '—'} days</p>
           </CardContent>
         </Card>
       </div>
@@ -89,29 +125,25 @@ const DashboardCompany = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-start justify-between">
-                <h4 className="font-medium text-sm">Senior React Developer</h4>
-                <Badge variant="default">Published</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">23 applications received</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">$400-600/day</span>
-                <Button variant="ghost" size="sm">Review</Button>
-              </div>
-            </div>
-            
-            <div className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-start justify-between">
-                <h4 className="font-medium text-sm">UX/UI Designer</h4>
-                <Badge variant="secondary">Draft</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">3 month project</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">$350-500/day</span>
-                <Button variant="ghost" size="sm">Publish</Button>
-              </div>
-            </div>
+            {recentMissions.length > 0 ? (
+              recentMissions.map((m) => (
+                <div key={m.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium text-sm">{m.title}</h4>
+                    <Badge variant="default">{m.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{m.requiredSkills?.slice(0,3).join(', ')}</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">${m.budgetMin} - ${m.budgetMax}</span>
+                    <Button variant="ghost" size="sm">
+                      <Link to={`/missions/${m.id}`}>Review</Link>
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No missions available</p>
+            )}
           </CardContent>
         </Card>
 
@@ -124,35 +156,19 @@ const DashboardCompany = () => {
                 <CardDescription>Applications awaiting your review</CardDescription>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link to="/applications">
+                <Link to="/missions">
                   View All <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-start justify-between">
-                <h4 className="font-medium text-sm">John Doe</h4>
-                <Badge variant="outline">New</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">Applied for Senior React Developer</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">5 years exp, €450/day</span>
-                <Button variant="ghost" size="sm">Review</Button>
-              </div>
-            </div>
-            
-            <div className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-start justify-between">
-                <h4 className="font-medium text-sm">Sarah Smith</h4>
-                <Badge variant="outline">New</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">Applied for UX/UI Designer</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">8 years exp, €400/day</span>
-                <Button variant="ghost" size="sm">Review</Button>
-              </div>
+            <div className="text-sm text-muted-foreground">{analytics?.recentApplications ? `${analytics.recentApplications} recent applications` : 'No recent applications'}</div>
+            <div className="text-center py-4">
+              <Button variant="outline" size="sm" onClick={() => setOpenMissionModal(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Post Mission
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -166,12 +182,10 @@ const DashboardCompany = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-4">
-            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center">
-              <Link to="/missions/new">
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => setOpenMissionModal(true)}>
                 <Plus className="h-6 w-6 mb-2" />
                 <span className="text-sm">Post Mission</span>
-              </Link>
-            </Button>
+              </Button>
             <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center">
               <Link to="/matching">
                 <Users className="h-6 w-6 mb-2" />
@@ -179,7 +193,7 @@ const DashboardCompany = () => {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center">
-              <Link to="/applications">
+              <Link to="/missions">
                 <FileText className="h-6 w-6 mb-2" />
                 <span className="text-sm">Review Applications</span>
               </Link>
@@ -194,6 +208,8 @@ const DashboardCompany = () => {
         </CardContent>
       </Card>
     </div>
+    <MissionModal open={openMissionModal} onOpenChange={setOpenMissionModal} />
+    </>
   );
 };
 

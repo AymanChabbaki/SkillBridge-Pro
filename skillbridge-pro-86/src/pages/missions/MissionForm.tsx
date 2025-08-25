@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { missionService } from '../../services/missionService';
-import { CreateMissionRequest } from '../../services/types';
+import { CreateMissionRequest, Mission } from '../../services/types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -31,15 +31,26 @@ const missionSchema = z.object({
 
 type MissionForm = z.infer<typeof missionSchema>;
 
-const MissionForm = () => {
+interface MissionFormProps {
+  missionId?: string;
+  onSaved?: (mission: Mission) => void;
+  onClose?: () => void;
+}
+
+const MissionForm = ({ missionId, onSaved, onClose }: MissionFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = missionId || routeId;
+  const isEdit = Boolean(id);
+  const [fetching, setFetching] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
   } = useForm<MissionForm>({
     resolver: zodResolver(missionSchema),
@@ -63,26 +74,67 @@ const MissionForm = () => {
         optionalSkills: data.optionalSkills ? data.optionalSkills.split(',').map(s => s.trim()).filter(s => s) : []
       };
 
-      await missionService.createMission(processedData);
-      toast({
-        title: "Success",
-        description: "Mission created successfully"
-      });
-      navigate('/missions');
+      if (isEdit && id) {
+        const updated = await missionService.updateMission(id, processedData);
+        toast({ title: 'Success', description: 'Mission updated successfully' });
+        if (onSaved) onSaved(updated);
+        if (onClose) onClose();
+        // navigate only when used as a standalone page
+        if (!missionId) navigate(`/missions/${id}`);
+      } else {
+        const created = await missionService.createMission(processedData);
+        toast({ title: 'Success', description: 'Mission created successfully' });
+        if (onSaved) onSaved(created);
+        if (onClose) onClose();
+        if (!missionId) navigate('/missions');
+      }
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create mission"
+        description: isEdit ? 'Failed to update mission' : 'Failed to create mission'
       });
     } finally {
       setLoading(false);
     }
   };
 
+  // If we're in edit mode, fetch mission data and populate the form
+  useEffect(() => {
+    const load = async () => {
+      if (!isEdit || !id) return;
+      setFetching(true);
+      try {
+        const mission = await missionService.getMissionById(id);
+        if (mission) {
+          // populate fields
+          setValue('title', mission.title);
+          setValue('description', mission.description || '');
+          setValue('sector', mission.sector || '');
+          setValue('duration', mission.duration || '');
+          setValue('modality', mission.modality as any);
+          setValue('urgency', mission.urgency as any);
+          setValue('experience', mission.experience as any);
+          setValue('startDate', mission.startDate ? mission.startDate.split('T')[0] : '');
+          setValue('budgetMin', mission.budgetMin);
+          setValue('budgetMax', mission.budgetMax);
+          setValue('requiredSkills', (mission.requiredSkills || []).join(', '));
+          setValue('optionalSkills', (mission.optionalSkills || []).join(', '));
+        }
+      } catch (err) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load mission for editing' });
+        navigate('/missions');
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    load();
+  }, [id]);
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Post New Mission</h1>
+      <h1 className="text-3xl font-bold">{isEdit ? 'Edit Mission' : 'Post New Mission'}</h1>
 
       <Card>
         <CardHeader>
@@ -90,6 +142,9 @@ const MissionForm = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {fetching && (
+              <div className="text-center py-6 text-muted-foreground">Loading mission...</div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="title">Mission Title</Label>
               <Input
@@ -143,43 +198,61 @@ const MissionForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Modality</Label>
-                <Select onValueChange={(value) => setValue('modality', value as 'remote' | 'onsite' | 'hybrid')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select modality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="remote">Remote</SelectItem>
-                    <SelectItem value="onsite">On-site</SelectItem>
-                    <SelectItem value="hybrid">Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="modality"
+                  render={({ field: { value, onChange } }) => (
+                    <Select onValueChange={(v) => onChange(v)} defaultValue={value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select modality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="remote">Remote</SelectItem>
+                        <SelectItem value="onsite">On-site</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Experience Level</Label>
-                <Select onValueChange={(value) => setValue('experience', value as 'junior' | 'mid' | 'senior' | 'lead')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="junior">Junior</SelectItem>
-                    <SelectItem value="mid">Mid-level</SelectItem>
-                    <SelectItem value="senior">Senior</SelectItem>
-                    <SelectItem value="lead">Lead</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="experience"
+                  render={({ field: { value, onChange } }) => (
+                    <Select onValueChange={(v) => onChange(v)} defaultValue={value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="junior">Junior</SelectItem>
+                        <SelectItem value="mid">Mid-level</SelectItem>
+                        <SelectItem value="senior">Senior</SelectItem>
+                        <SelectItem value="lead">Lead</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Urgency</Label>
-                <Select onValueChange={(value) => setValue('urgency', value as 'low' | 'medium' | 'high')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select urgency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="urgency"
+                  render={({ field: { value, onChange } }) => (
+                    <Select onValueChange={(v) => onChange(v)} defaultValue={value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select urgency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -246,14 +319,14 @@ const MissionForm = () => {
             </div>
 
             <div className="flex gap-4">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || fetching}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {isEdit ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
-                  'Create Mission'
+                  isEdit ? 'Update Mission' : 'Create Mission'
                 )}
               </Button>
               <Button

@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Separator } from '../../components/ui/separator';
 import { Loader2, MapPin, Clock, DollarSign, Calendar, Building } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import MissionModal from '../../components/missions/MissionModal';
 
 const MissionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ const MissionDetail = () => {
   const [applyError, setApplyError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [openEdit, setOpenEdit] = useState(false);
 
   useEffect(() => {
     const fetchMission = async () => {
@@ -185,8 +187,8 @@ const MissionDetail = () => {
           {user?.role === 'COMPANY' && (
             <Card>
               <CardContent className="pt-6 space-y-2">
-                <Button className="w-full" variant="outline" asChild>
-                  <Link to={`/missions/${mission.id}/edit`}>Edit Mission</Link>
+                <Button className="w-full" variant="outline" onClick={() => setOpenEdit(true)}>
+                  Edit Mission
                 </Button>
                 <Button className="w-full" variant="outline" asChild>
                   <Link to={`/applications/mission/${mission.id}`}>View Applications</Link>
@@ -197,6 +199,7 @@ const MissionDetail = () => {
         </div>
       </div>
     </div>
+    <MissionModal open={openEdit} onOpenChange={setOpenEdit} missionId={mission.id} />
 
       {/* Apply Modal (simple inline modal) */}
       {showApply && (

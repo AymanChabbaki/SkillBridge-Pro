@@ -35,7 +35,7 @@ import MatchForMission from '../pages/matching/MatchForMission';
 // Assessment pages
 
 // Interview pages
-import InterviewScheduler from '../pages/interviews/InterviewScheduler';
+import InterviewsList from '../pages/interviews/InterviewsList';
 import InterviewDetail from '../pages/interviews/InterviewDetail';
 
 // Contract pages
@@ -110,7 +110,7 @@ export const router = createBrowserRouter([
         path: 'dashboard',
         element: (
           <RequireAuth>
-            <DashboardFreelance />
+            <DashboardRouter />
           </RequireAuth>
         ),
       },
@@ -242,7 +242,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <InterviewScheduler />,
+            element: <InterviewsList />,
           },
           {
             path: ':id',

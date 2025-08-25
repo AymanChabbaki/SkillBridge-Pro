@@ -46,9 +46,9 @@ const AppLayout = () => {
     ],
     COMPANY: [
       { icon: Home, label: 'Dashboard', path: '/dashboard' },
-      { icon: User, label: 'Company Profile', path: '/profile' },
+  { icon: User, label: 'Company Profile', path: '/profile/company' },
       { icon: Briefcase, label: 'My Missions', path: '/missions' },
-      { icon: FileText, label: 'Applications', path: '/applications' },
+  // Company-level applications view is mission-scoped; remove global Applications link
       { icon: MessageSquare, label: 'Interviews', path: '/interviews' },
       { icon: FileText, label: 'Contracts', path: '/contracts' },
       { icon: DollarSign, label: 'Payments', path: '/payments' },

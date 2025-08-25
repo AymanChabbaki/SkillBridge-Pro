@@ -63,6 +63,23 @@ export class InterviewController {
     }
   };
 
+  completeInterview = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { rating, notes } = req.body || {};
+
+      const interview = await this.interviewService.getInterview(id, req.user!.id, req.user!.role);
+
+      // Only company owner or admin can mark complete
+      // (service will validate)
+      const updated = await this.interviewService.completeInterview(id, { rating, notes }, req.user!.id, req.user!.role);
+
+      return successResponse(res, updated, 'Interview completed');
+    } catch (error) {
+      next(error);
+    }
+  };
+
   deleteInterview = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

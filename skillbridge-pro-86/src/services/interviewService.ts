@@ -17,7 +17,14 @@ export const interviewService = {
     return patch<Interview>(`/interviews/${id}/notes`, { notes, rating });
   },
 
-  async completeInterview(id: string, rating: number): Promise<Interview> {
-    return patch<Interview>(`/interviews/${id}/complete`, { completed: true, rating });
+  async updateInterview(id: string, data: Partial<ScheduleInterviewRequest> & { scheduledAt?: string }): Promise<Interview> {
+    return patch<Interview>(`/interviews/${id}`, data as any);
+  },
+
+  async completeInterview(id: string, rating: number, notes?: string): Promise<Interview> {
+    return patch<Interview>(`/interviews/${id}/complete`, { completed: true, rating, notes });
+  },
+  async getUpcoming(): Promise<Interview[]> {
+    return get<Interview[]>('/interviews/upcoming');
   },
 };

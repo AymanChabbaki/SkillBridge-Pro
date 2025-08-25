@@ -41,6 +41,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
+    "nodemailer": "^7.0.5",
     "pino": "^8.17.2",
     "pino-pretty": "^13.1.1",
     "redis": "^4.6.12",

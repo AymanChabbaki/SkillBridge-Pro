@@ -84,6 +84,7 @@ model User {
   // Relations
   companyProfile    CompanyProfile?
   freelancerProfile FreelancerProfile?
+  notifications     Notification[]
 
   // Feedback relations
   feedbackGiven    Feedback[] @relation("FeedbackFrom")
@@ -435,4 +436,19 @@ model AnalyticsSnapshot {
   createdAt DateTime @default(now())
 
   @@map("analytics_snapshots")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "info" | "warning" | "success" | "email"
+  title     String
+  body      String?
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
