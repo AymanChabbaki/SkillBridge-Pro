@@ -65,6 +65,15 @@ export class FreelancerService {
     }
   }
 
+  async setCvPath(userId: string, cvPath: string) {
+    // ensure profile exists
+    const existing = await freelancerRepository.findByUserId(userId);
+    if (!existing) {
+      throw new Error('Freelancer profile not found');
+    }
+    return freelancerRepository.setCvPath(userId, cvPath);
+  }
+
   async deleteFreelancerProfile(userId: string) {
     const existingProfile = await freelancerRepository.findByUserId(userId);
     

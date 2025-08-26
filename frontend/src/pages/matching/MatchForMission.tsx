@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Loader2, Star, User } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../state/store';
+import { profileService } from '../../services/profileService';
 
 const MatchForMission = () => {
   const { missionId } = useParams<{ missionId: string }>();
@@ -102,6 +105,27 @@ const MatchForMission = () => {
                     <Button size="sm" variant="outline">
                       View Profile
                     </Button>
+                    {/** show download only to company users */}
+                    {((useSelector as any)((state: RootState) => state.auth).user)?.role === 'COMPANY' && (
+                      <Button size="sm" variant="secondary" onClick={async () => {
+                        try {
+                          const blob = await profileService.downloadCv(String(match.freelancer?.user?.id));
+                          const url = window.URL.createObjectURL(blob as any);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${match.freelancer?.user?.name || 'cv'}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error('Download CV failed', err);
+                          alert('CV not available');
+                        }
+                      }}>
+                        Download CV
+                      </Button>
+                    )}
                     <Button size="sm">
                       Invite
                     </Button>

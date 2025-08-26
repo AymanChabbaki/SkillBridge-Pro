@@ -134,6 +134,7 @@ model FreelancerProfile {
   remote        Boolean  @default(true)
   languages     Json?    // Spoken languages
   experience    Int?     // Years of experience
+  cvPath        String?  // path to uploaded CV file (relative to upload dir)
   profileViews  Int      @default(0)
   rating        Float?
   completedJobs Int      @default(0)

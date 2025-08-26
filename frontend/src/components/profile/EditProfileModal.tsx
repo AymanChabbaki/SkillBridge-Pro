@@ -20,6 +20,7 @@ const EditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSaved }) 
   const [skillsText, setSkillsText] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedCv, setSelectedCv] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [fileError, setFileError] = useState<string | null>(null);
   const [languagesText, setLanguagesText] = useState('');
@@ -75,6 +76,23 @@ const EditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSaved }) 
     reader.readAsDataURL(f);
   };
 
+  const handleCvChange = (f?: File | null) => {
+    if (!f) {
+      setSelectedCv(null);
+      return;
+    }
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(f.type)) {
+      toast({ variant: 'destructive', title: 'Invalid CV', description: 'Only PDF/DOC/DOCX files are allowed' });
+      return setSelectedCv(null);
+    }
+    if (f.size > MAX_BYTES) {
+      toast({ variant: 'destructive', title: 'File too large', description: 'Please choose a CV under 5MB' });
+      return setSelectedCv(null);
+    }
+    setSelectedCv(f);
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
@@ -123,6 +141,17 @@ const EditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSaved }) 
       }
 
       const saved = await updateFn(updated);
+
+      // If CV selected, upload it
+      try {
+        if (selectedCv) {
+          const profileService = await import('../../services/profileService').then(m => m.profileService);
+          await profileService.uploadCv(selectedCv);
+        }
+      } catch (cvErr) {
+        console.warn('Failed to upload CV', cvErr);
+        toast({ variant: 'destructive', title: 'CV upload failed', description: 'Your profile was saved but CV upload failed.' });
+      }
 
       // update avatar on User table if changed
       try {
@@ -218,6 +247,11 @@ const EditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSaved }) 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        </div>
+        <div className="mt-2">
+          <label className="block text-sm font-medium mb-1">Upload CV (PDF/DOC/DOCX)</label>
+          <input type="file" accept=".pdf,.doc,.docx" onChange={e => handleCvChange(e.target.files?.[0] || null)} />
+          {selectedCv && <div className="text-sm text-muted-foreground mt-1">Selected: {selectedCv.name}</div>}
         </div>
       </div>
     </Modal>

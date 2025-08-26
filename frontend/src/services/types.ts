@@ -65,6 +65,8 @@ export interface FreelancerProfile {
   languages: string[];
   // user shorthand for display purposes
   user?: { id: string; name: string; avatar?: string; email?: string };
+  // optional path to uploaded CV (relative path returned by API)
+  cvPath?: string | null;
   // runtime-only flag populated by backend when a freelancer has passing assessments
   isCertified?: boolean;
   portfolio: PortfolioItem[];

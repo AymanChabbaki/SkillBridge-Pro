@@ -155,3 +155,11 @@ freelancerRouter.delete('/me', authenticateToken, requireFreelance, freelancerCo
  *           type: string
  */
 freelancerRouter.get('/:id', optionalAuth, freelancerController.getFreelancerById);
+
+// Upload CV for current freelancer (authenticated freelance only)
+// Support both PUT and POST for CV upload (frontend may use POST multipart/form-data)
+freelancerRouter.put('/me/cv', authenticateToken, requireFreelance, freelancerController.uploadMyCv);
+freelancerRouter.post('/me/cv', authenticateToken, requireFreelance, freelancerController.uploadMyCv);
+
+// Public download CV by freelancer id
+freelancerRouter.get('/:id/cv', optionalAuth, freelancerController.downloadCvById);

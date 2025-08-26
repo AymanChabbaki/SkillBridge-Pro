@@ -5,11 +5,16 @@ import { FreelancerProfile } from '../../services/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Loader2, MapPin, DollarSign } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../state/store';
 
 const PublicFreelancerProfile = () => {
   const { id } = useParams();
   const [profile, setProfile] = useState<FreelancerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const auth = useSelector((state: RootState) => state.auth);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -41,9 +46,15 @@ const PublicFreelancerProfile = () => {
 
   return (
     <div className="space-y-6">
+      {/* Download CV button for companies */}
+      {profile && (
+        <div className="flex justify-end">
+          <CompanyCvDownload profile={profile} />
+        </div>
+      )}
       <h1 className="text-3xl font-bold">{profile.user?.name || profile.title || 'Freelancer'}</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -127,7 +138,7 @@ const PublicFreelancerProfile = () => {
           </Card>
         </div>
 
-        <div className="space-y-6">
+  <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Availability</CardTitle>
@@ -163,10 +174,86 @@ const PublicFreelancerProfile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* CV card - visible to profile owner so they can view their CV */}
+          {(auth.user && auth.user.id === profile.user?.id) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>CV</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">You can preview or download your uploaded CV here.</p>
+                  <div className="flex gap-2">
+                    <Button onClick={async () => {
+                      try {
+                        const blob = await profileService.downloadCv(String(profile.user?.id));
+                        const url = window.URL.createObjectURL(blob);
+                        setPreviewUrl(url);
+                      } catch (err) {
+                        console.error('Failed to load CV for preview', err);
+                        alert('No CV available to preview');
+                      }
+                    }}>View CV</Button>
+                    <Button onClick={async () => {
+                      try {
+                        const blob = await profileService.downloadCv(String(profile.user?.id));
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${profile.user?.name || 'cv'}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                      } catch (err) {
+                        console.error('Failed to download CV', err);
+                        alert('No CV available to download');
+                      }
+                    }}>Download CV</Button>
+                    {previewUrl && (
+                      <Button variant="ghost" onClick={() => { window.URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}>Close Preview</Button>
+                    )}
+                  </div>
+
+                  {previewUrl && (
+                    <div className="mt-3">
+                      <iframe title="CV preview" src={previewUrl} className="w-full h-80 border" />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
+const CompanyCvDownload: React.FC<{ profile: FreelancerProfile }> = ({ profile }) => {
+  const auth = useSelector((state: RootState) => state.auth);
+  const handleDownload = async () => {
+    try {
+      const blob = await profileService.downloadCv(String(profile.user?.id));
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${profile.user?.name || 'cv'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download CV', err);
+      alert('CV not available');
+    }
+  };
+
+  // only show to authenticated company users
+  if (!auth.user || auth.user.role !== 'COMPANY') return null;
+
+  return <Button onClick={handleDownload}>Download CV</Button>;
+}
 
 export default PublicFreelancerProfile;

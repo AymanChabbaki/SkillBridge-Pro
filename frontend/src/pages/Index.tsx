@@ -16,46 +16,14 @@ import {
   Target,
   MessageSquare
 } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import Hero from '../components/Hero';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-secondary/20" />
-        <div className="relative container mx-auto px-6 py-20">
-          <div className="text-center space-y-8 max-w-4xl mx-auto">
-            <Badge variant="secondary" className="text-sm font-medium animate-pulse">
-              🚀 The Future of Freelance Talent Matching
-            </Badge>
-            
-            <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-tight">
-              SkillBridge
-              <span className="block text-5xl md:text-6xl text-foreground">Pro</span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Connect exceptional freelancers with innovative companies through 
-              <span className="text-primary font-semibold"> AI-powered matching</span>, 
-              streamlined workflows, and transparent collaboration.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-              <Button size="lg" className="text-lg px-8 py-4 group" asChild>
-                <Link to="/auth/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-4" asChild>
-                <Link to="/missions">
-                  Browse Missions
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Navbar />
+      <Hero />
 
       {/* Stats Section */}
       <section className="py-16 bg-gradient-to-r from-primary/5 to-secondary/5">

@@ -110,6 +110,7 @@ export class FreelancerRepository {
             createdAt: true,
           },
         },
+          // cvPath: true,
         portfolio: {
           orderBy: { createdAt: 'desc' },
         },
@@ -176,6 +177,7 @@ export class FreelancerRepository {
             avatar: true,
           },
         },
+  // cvPath: true,
         portfolio: {
           orderBy: { createdAt: 'desc' },
         },
@@ -240,6 +242,14 @@ export class FreelancerRepository {
     }
 
     return p;
+  }
+
+  async setCvPath(userId: string, cvPath: string) {
+  // cast prisma to any to avoid type errors before regenerating Prisma client
+  return (prisma as any).freelancerProfile.update({
+      where: { userId },
+      data: { cvPath },
+    });
   }
 
   async create(userId: string, data: UpdateFreelancerProfileDto) {

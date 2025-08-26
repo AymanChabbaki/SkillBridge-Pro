@@ -20,6 +20,22 @@ export const profileService = {
     return get<FreelancerProfile>(`/freelancers/${id}`);
   },
 
+  async uploadCv(file: File): Promise<{ path: string }> {
+    const form = new FormData();
+    form.append('cv', file);
+    // Use axios instance directly to allow multipart form-data
+    const resp = await post<{ path: string }>('/freelancers/me/cv', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return resp;
+  },
+
+  async downloadCv(freelancerId: string): Promise<Blob> {
+    // Use the raw axios instance to get blob
+    // @ts-ignore
+    const api = (await import('./api')).default;
+    const response = await api.request({ method: 'GET', url: `/freelancers/${freelancerId}/cv`, responseType: 'blob' });
+    return response.data as Blob;
+  },
+
   async getFreelancerByIdWithIncrement(id: string): Promise<FreelancerProfile> {
     return get<FreelancerProfile>(`/freelancers/${id}?increment=true`);
   },

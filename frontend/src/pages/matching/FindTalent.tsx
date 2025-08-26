@@ -14,6 +14,7 @@ import { formatISO } from 'date-fns';
 import SchedulingModal from '../../components/matching/SchedulingModal';
 import { useToast } from '../../components/ui/use-toast';
 import { shortlistService } from '../../services/shortlistService';
+import { profileService } from '../../services/profileService';
 
 const FindTalent = () => {
   const { missionId } = useParams<{ missionId: string }>();
@@ -182,6 +183,24 @@ const FindTalent = () => {
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={handleDislike}>Skip</Button>
                     <Button size="sm" variant="ghost" onClick={() => handleShortlist(current)}>Shortlist</Button>
+                    {user && user.role === 'COMPANY' && (
+                      <Button size="sm" variant="secondary" onClick={async () => {
+                        try {
+                          const blob = await profileService.downloadCv(String(current.freelancer?.user?.id));
+                          const url = window.URL.createObjectURL(blob as any);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${current.freelancer?.user?.name || 'cv'}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error('Download CV failed', err);
+                          toast({ title: 'Error', description: 'CV not available' });
+                        }
+                      }}>Download CV</Button>
+                    )}
                     <Button size="sm" onClick={handleLike} disabled={scheduling || modalOpen}>{scheduling ? 'Sending…' : 'Like & Invite'}</Button>
                   </div>
             </div>

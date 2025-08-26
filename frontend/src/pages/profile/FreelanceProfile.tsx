@@ -71,6 +71,11 @@ const FreelanceProfile = () => {
                 <div>
                   <h3 className="font-semibold text-lg">{user?.name}</h3>
                   <p className="text-muted-foreground">{profile?.title || 'No title set'}</p>
+                  {profile?.cvPath && (
+                    <div className="mt-1">
+                      <Badge variant="secondary">CV uploaded</Badge>
+                    </div>
+                  )}
                 </div>
               </div>
               {profile?.bio && (
@@ -95,6 +100,35 @@ const FreelanceProfile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* CV preview/download for owner */}
+          {profile?.cvPath && (
+            <Card>
+              <CardHeader>
+                <CardTitle>CV</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Button onClick={async () => {
+                    try {
+                      const blob = await profileService.downloadCv(String(user?.id));
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${user?.name || 'cv'}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Failed to download CV', err);
+                      alert('CV not available');
+                    }
+                  }}>Download CV</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
